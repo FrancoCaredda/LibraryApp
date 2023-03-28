@@ -13,7 +13,19 @@ db.serialize(() => {
             [name] NVARCHAR(20) NOT NULL,
             [last_name] NVARCHAR(20) NOT NULL,
             [email] NVARCHAR(50) NOT NULL,
-            [rating] FLOAT NOT NULL  
+            [rating] DECIMAL(10, 2) NOT NULL  
+        );
+    `);
+
+    db.exec(`
+        CREATE TABLE [Books]
+        (
+            [id] INT PRIMARY KEY NOT NULL,
+            [name] NVARCHAR(50) NOT NULL,
+            [price] DECIMAL(10, 2) NOT NULL,
+            [page_count] INT NOT NULL,
+            [author_id] INT NOT NULL,
+            FOREIGN KEY([author_id]) REFERENCES [Authors]([id])
         );
     `);
 
@@ -25,6 +37,12 @@ db.serialize(() => {
     db.exec(`
         INSERT INTO [Authors] ([id], [name], [last_name], [email], [rating])
         VALUES (1002, 'George', 'Martin', 'george_martin@gmail.com', 5.0);
+    `);
+
+    db.exec(`
+        INSERT INTO [Books] ([id], [name], [price], [page_count], [author_id])
+        VALUES (2001, 'Grammatica avanzata della lingua italiana', 19.95, 200, 1001),
+               (2002, 'Grammatica practica della lingua italiana', 31.11, 288, 1001);
     `);
 
     db.on("error", (err) => {

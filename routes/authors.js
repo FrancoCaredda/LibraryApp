@@ -3,7 +3,10 @@ const controller = require("../controllers/authors");
 
 const router = express.Router();
 
-// /api/book
+// /api/authors
 router.get("/", controller.getAuthors);
+router.get("/:id", controller.getAuthor);
+router.use(express.urlencoded());
+router.post("/", controller.addAuthor);
 
 module.exports = router;
