@@ -1,5 +1,6 @@
 const db = require("../database");
 
+// GET
 const getAuthors = (req, res) => {
     try {
         db.all(`
@@ -54,6 +55,7 @@ const getAuthor = (req, res) => {
     }
 };
 
+// POST Web Form
 const addAuthor = (req, res) => {
     if (Object.keys(req.body).length === 0) {
         res.status(400).json({
@@ -65,37 +67,39 @@ const addAuthor = (req, res) => {
     }
     
     try {
-        db.get("SELECT MAX([id]) FROM [Authors];", [], function (err, rows) {
-            if (err) {
-                throw err;
-            }
-
-            let max = rows["MAX([id])"];
-
-            let stmt = db.prepare(`INSERT INTO [Authors] ([id], [name], [last_name], [email], [rating])
-            VALUES (?, ?, ?, ?, ?);`);
-
-            let {name, lastName, email, rating} = req.body;
-
-            if (!name || !lastName || !email || !rating) {
-                res.status(400).json({
-                    success: false,
-                    value: "Error: you must suply name, lastName, email, rating within the body"
-                });
-
-                return;
-            }
-
-            // TODO: Chaining hell
-            stmt.run([max + 1, name, lastName, email, rating], (err) => {
+        db.serialize(() => {
+            db.get("SELECT MAX([id]) FROM [Authors];", [], (err, rows) => {
                 if (err) {
                     throw err;
                 }
+    
+                let max = rows["MAX([id])"];
+                
+                
+                let {name, lastName, email, rating} = req.body;
 
-                res.status(200).json({
-                    success: true,
-                    value: max + 1    
-                });
+                if (!name || !lastName || !email || !rating) {
+                    res.status(400).json({
+                        success: false,
+                        value: "Error: you must suply name, lastName, email, rating within the body"
+                    });
+
+                    return;
+                }
+
+                db.run(`INSERT INTO [Authors] ([id], [name], [last_name], [email], [rating])
+                        VALUES (?, ?, ?, ?, ?);`, 
+                        [max + 1, name, lastName, email, rating], 
+                        (err) => {
+                    if (err) {
+                        throw err;
+                    }
+
+                    res.status(200).json({
+                        success: true,
+                        value: max + 1    
+                    });
+                }); 
             });
         });
     } catch (e) {
@@ -106,4 +110,79 @@ const addAuthor = (req, res) => {
     }
 };
 
-module.exports = { getAuthors, getAuthor, addAuthor };
+// PUT Web Form
+const updateAuthor = (req, res) => {
+    if (Object.keys(req.body).length === 0) {
+        res.status(400).json({
+            success: false,
+            value: "You have to provide the body of a request"
+        });
+
+        return;
+    }
+
+    try {
+        let { id } = req.params;
+
+        let { name, lastName, email, rating } = req.body;
+
+        if (!name || !lastName || !email || !rating) {
+            res.status(400).json({
+                success: false,
+                value: "You have to provide all data in the body of a request"
+            });
+
+            return;
+        }
+
+        db.run(`UPDATE [Authors]
+                SET [name]=?,
+                    [last_name]=?,
+                    [email]=?,
+                    [rating]=?
+                WHERE [id] = ?`,
+                [name, lastName, email, Number(rating), Number(id)],
+                (err) => {
+                    if (err) {
+                        throw err;
+                    }
+
+                    res.status(200).json({
+                        success: true,
+                        value: "Success"
+                    })
+                });
+    } catch (e) {
+        res.status(500).json({
+            success: false,
+            value: "Something went wrong on the server"
+        })
+    }
+};
+
+// DELETE
+const deleteAuthor = (req, res) => {
+    let { id } = req.params;
+
+    try {
+        db.run(`
+            DELETE FROM [Authors] WHERE [id] = ?   
+        `, [Number(id)], (err) => {
+            if (err) {
+                throw err;
+            }
+
+            res.status(200).json({
+                success: true,
+                value: "Record is deleted"
+            });
+        })
+    } catch (e) {
+        res.status(500).json({
+            success: false,
+            value: "Something went wrong on the server"
+        });
+    }
+};
+
+module.exports = { getAuthors, getAuthor, addAuthor, updateAuthor, deleteAuthor };
